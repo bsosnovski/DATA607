@@ -1,0 +1,94 @@
+---
+title: "Assignment Week 1"
+author: "B. Sosnovski"
+date: "9/2/2018"
+output: html_document
+---
+
+
+# Mushroom Dataset
+
+This assignment uses a dataset about mushrooms in the Agaricus and Lepiota Family. The data set can be found in the UCI repository  <https://archive.ics.uci.edu/ml/datasets/Mushroom>.
+
+We take the data, and create a data frame with a subset of the attributes in the dataset. We include the first attribute that indicates edible or poisonous ("type") and four other attributes ("cap_shape", "cap_color", "odor", and "population").
+
+## Load packages
+```{r}
+library(stringr)
+library(XML)
+library(RCurl)
+```
+
+I didn't use the next block of code because for some reason I can't think of, the first line of the data obtained includes some numbers mixed togeter and they are not in the data in the web page. Consequently, it changes the number of columns for the first line from the rest of the data. 
+```{r}
+#table <-read.csv("https://archive.ics.uci.edu/ml/machine-learning-databases/mushroom/agaricus-lepiota.data", sep=",")
+#head(table)
+```
+
+
+Of course, I could use regular expressions to clean up the numbers that appeared but, instead, I did the following to retrieve the data.
+
+## Parsing data from web site
+```{r}
+con <- url("https://archive.ics.uci.edu/ml/machine-learning-databases/mushroom/agaricus-lepiota.data","r")
+data <- readLines(con)
+head(data)
+```
+
+## Read data into a csv temp file and change it to data frame
+```{r}
+tf <- tempfile()
+writeLines(data, tf)
+ncol <- max(count.fields(tf, sep = ","))
+df<-read.csv(tf, fill = TRUE, header = FALSE,col.names = paste0("V", seq_len(ncol)))
+unlink(tf)
+head(df)
+```
+
+## Subsetting the data frame and renaming columns
+```{r}
+df<-df[,c(1,2,4,6,22)]
+head(df)
+
+names(df) <- c("type", "cap_shape", "cap_color","odor", "population")
+names(df)
+```
+
+## Cleanse type
+```{r}
+df$type <- ifelse(str_detect(df$type, "p")==T, "poisonous", "edible")
+df[1:5,]
+```
+
+## Cleanse cap_shape
+```{r}
+patterns<-c("bell"="b","conical"="c","convex"="x","flat"="f", "knobbed"="k","sunken"="s")
+match <- sapply(patterns, grepl, df$cap_shape, ignore.case = T) #logical vector indicating which elements match
+df$cap_shape <- colnames(match)[max.col(match, ties.method = "first")]
+df[1:5,]
+```
+
+## Cleanse cap_color
+```{r}
+patterns<-c("brown"="n","buff"="b","cinnamon"="c","gray"="g","green"="r", "pink"="p","purple"="u","red"="e","white"="w","yellow"="y")
+match <- sapply(patterns, grepl, df$cap_color, ignore.case = T) 
+df$cap_color <- colnames(match)[max.col(match, ties.method = "first")]
+```
+
+## Cleanse odor
+```{r}
+patterns<-c("almond"="a","anise"="l","creosote"="c","fishy"="y","foul"="f", "musty"="m","none"="n","pungent"="p","spicy"="s" )
+match <- sapply(patterns, grepl, df$odor, ignore.case = T) 
+df$odor <- colnames(match)[max.col(match, ties.method = "first")]
+
+```
+
+## Cleanse population
+```{r}
+patterns<-c("abundant"="a","clustered"="c","numerous"="n", "scattered"="s","several"="v","solitary"="y" )
+match <- sapply(patterns, grepl, df$population, ignore.case = T) 
+df$population <- colnames(match)[max.col(match, ties.method = "first")]
+
+df[1:5,]
+
+summary(df)
