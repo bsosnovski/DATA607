@@ -1,0 +1,115 @@
+## Week 2 Assignment
+## SQL Statements
+
+
+create table movies(
+MovieID int not null auto_increment primary key,
+Title varchar(100) not null
+);
+
+
+create table critics(
+CriticID int not null auto_increment primary key,
+FirstName varchar(100),
+Username varchar(10)
+);
+
+
+create table ratings(
+RatingID int not null auto_increment primary key,
+Rate int(1),
+CriticID int,
+MovieID int,
+foreign key (CriticID) references critics (CriticID) on update cascade,
+foreign key (MovieID) references movies (MovieID) on update cascade
+);
+
+insert into movies (Title)
+values ('Three_Billboards_Outside_Ebbing_Missouri'), 1
+('La_La_Land'), 
+('Lady_Bird'), 
+('Red_Sparrow'), 
+('Star_Wars_The_Last_Jedi'), 
+('Coco'), 
+('Wonder_Woman'), 
+('Black_Panther'); 
+
+insert into critics (LastName, FirstName, Username)
+values ('Petersen', 'Joan', 'jp'),  
+(‘Valera', 'vk'), 
+('Nataliya', 'nk'), 
+('Bianca', 'bs'), 
+('Robert', 'rk'), 
+('Mila', 'mp'), 
+('Alexander', 'as'), 
+('Dabkowska', 'Ewa', 'ed'), 
+(’Nika, ’ns’); 
+(‘Sasha’, ’sg’); 
+('Irina', 'ig'); 
+
+
+insert into ratings(CriticID, MovieID, Rate)
+values (1, 1, 5),
+(1, 3, 4),
+(2, 1, 5),
+(2, 5, 4),
+(2, 6, 4),
+(2, 7, 3),
+(2, 8, 2),
+(3, 2, 4),
+(3, 5, 5),
+(3, 6, 4),
+(3, 7, 5),
+(3, 8, 5),
+(4, 1, 5),
+(4, 2, 4),
+(4, 3, 5),
+(4, 4, 3),
+(4, 5, 5),
+(4, 7, 4),
+(4, 8, 4),
+(5, 2, 4),
+(5, 5, 5),
+(6, 2, 5),
+(6, 6, 5),
+(6, 7, 5),
+(7, 2, 3),
+(7, 3, 4),
+(7, 4, 2),
+(7, 5, 5),
+(7, 7, 5),
+(7, 8, 5),
+(8, 3, 2),
+(8, 4, 3),
+(8, 7, 4),
+(10, 2, 4), 
+(10, 7, 4);
+
+insert into ratings(CriticID, MovieID, Rate)
+values (10, 7, 4),
+
+select   c.FirstName, c.LastName, m.Title, r.Rate
+from movies m
+join ratings r
+on r.MovieID = m.MovieID
+join critics c
+on r.CriticID = c.CriticID
+order by c.CriticID, m.MovieID;
+
+
++++++++++++++++
+
+SQLite statements (only the ones that are different from the above)
+
+create table movies(
+MovieID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+Title varchar(100) not null
+);
+
+
+create table critics(
+CriticID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+FirstName varchar(100),
+Username varchar(10)
+);
+
