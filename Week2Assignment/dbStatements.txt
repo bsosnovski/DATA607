@@ -1,19 +1,17 @@
-## Week 2 Assignment
-## SQL Statements
+Week 2 Assignment
 
+MySQL Statetments
 
 create table movies(
 MovieID int not null auto_increment primary key,
 Title varchar(100) not null
 );
 
-
 create table critics(
 CriticID int not null auto_increment primary key,
 FirstName varchar(100),
 Username varchar(10)
 );
-
 
 create table ratings(
 RatingID int not null auto_increment primary key,
@@ -25,27 +23,27 @@ foreign key (MovieID) references movies (MovieID) on update cascade
 );
 
 insert into movies (Title)
-values ('Three_Billboards_Outside_Ebbing_Missouri'), 1
-('La_La_Land'), 
-('Lady_Bird'), 
-('Red_Sparrow'), 
-('Star_Wars_The_Last_Jedi'), 
-('Coco'), 
-('Wonder_Woman'), 
-('Black_Panther'); 
+values ('Three_Billboards_Outside_Ebbing_Missouri'),   #1
+('La_La_Land'),   #2
+('Lady_Bird'),  #3
+('Red_Sparrow'),   #4
+('Star_Wars_The_Last_Jedi'),  #5
+('Coco'),   #6
+('Wonder_Woman'),   #7
+('Black_Panther');   #8
 
-insert into critics (LastName, FirstName, Username)
-values ('Petersen', 'Joan', 'jp'),  
-(‘Valera', 'vk'), 
-('Nataliya', 'nk'), 
-('Bianca', 'bs'), 
-('Robert', 'rk'), 
-('Mila', 'mp'), 
-('Alexander', 'as'), 
-('Dabkowska', 'Ewa', 'ed'), 
-(’Nika, ’ns’); 
-(‘Sasha’, ’sg’); 
-('Irina', 'ig'); 
+insert into critics (FirstName, Username)
+values ('Joan', 'jp'),  #1
+('Valera', 'vk'),   #2
+('Nataliya', 'nk'),  #3
+('Bianca', 'bs'),  #4
+('Robert', 'rk'),  #5
+('Mila', 'mp'),  #6
+('Alexander', 'as'),  #7
+('Ewa', 'ed'),  #8
+('Nika', 'ns'),  #9
+('Sasha', 'sg'),  #10
+('Ira’, 'ig');  #11
 
 
 insert into ratings(CriticID, MovieID, Rate)
@@ -82,13 +80,13 @@ values (1, 1, 5),
 (8, 3, 2),
 (8, 4, 3),
 (8, 7, 4),
-(10, 2, 4), 
+(9, 7, 4), 
 (10, 7, 4);
 
 insert into ratings(CriticID, MovieID, Rate)
-values (10, 7, 4),
+values (9, 2, 4),
 
-select   c.FirstName, c.LastName, m.Title, r.Rate
+select   c.FirstName, m.Title, r.Rate
 from movies m
 join ratings r
 on r.MovieID = m.MovieID
@@ -112,4 +110,6 @@ CriticID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
 FirstName varchar(100),
 Username varchar(10)
 );
+
+
 
