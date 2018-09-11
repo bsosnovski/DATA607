@@ -1,0 +1,82 @@
+---
+title: "Week 2 Assignment"
+author: "B. Sosnovski"
+date: "9/8/2018"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+# SQL and R
+
+In this assignment a database called movie_ratings was created in MySQL. The database contains about recent popular movies choosen at random.  People that I know (friends, family members, and myself included) rated each of these movie that on a scale of 1 (not good) to 5 (excellent). For the movies not seen no rate was provided.
+
+The movie_ratings.db can be downloaded from 
+https://github.com/bsosnovski/DATA607/blob/master/Week2Assignment/Week2Assignment_MySQL/movie_ratings_db.sql
+
+```{r pressure, echo=FALSE, fig.cap="Movie_Ratings Schema Diagram", out.width = '80%'}
+knitr::include_graphics("Movie_Ratings_Schema_Diagram.jpeg")
+```
+
+
+## Load packages
+```{r}
+library(knitr)
+#library(DBI)
+library(RMySQL)
+
+
+```
+
+## Establish Connection
+```{r}
+con <- dbConnect(MySQL(), user='test_user', password='data607', dbname='movie_ratings', host='localhost')
+```
+
+## Basic Use
+```{r}
+dbListTables(con)
+dbListFields(con, "critics")
+```
+
+## SQL Queries
+```{r}
+sql <- "SELECT * FROM critics"
+dbGetQuery(con, sql)
+```
+
+```{r}
+Movies <- dbReadTable(con, 'movies')
+str(Movies)
+Movies
+```
+
+```{r}
+sql <- "SELECT * FROM ratings"
+dbGetQuery(con, sql, n=5)
+```
+
+```{r}
+sql <- "SELECT   c.FirstName, m.Title, r.Rate 
+        FROM movies m JOIN ratings r ON r.MovieID = m.MovieID 
+        JOIN critics c ON r.CriticID = c.CriticID 
+        ORDER BY c.CriticID, m.MovieID;"
+result <- dbGetQuery(con, sql)
+result
+```
+
+## SQL Aggregate functions
+```{r}
+num_rates <- "SELECT m.title, COUNT(*) FROM movies m
+        JOIN ratings r ON m.movieID = r.MovieID
+        GROUP BY m.title"
+dbGetQuery(con, num_rates)
+```
+
+```{r}
+avg_ratings <- "SELECT m.title, AVG(Rate)FROM movies m
+        JOIN ratings r ON m.movieID = r.MovieID
+        GROUP BY m.title"
+dbGetQuery(con,avg_ratings)
+dbDisconnect(con)
