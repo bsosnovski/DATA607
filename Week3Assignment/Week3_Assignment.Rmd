@@ -1,0 +1,192 @@
+---
+title: "Week3_Assignment"
+author: "B. Sosnovski"
+date: "9/15/2018"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+
+```
+
+# Regular expressions and string processing
+
+In this assignment, solutions to problems 3, 4 and 9 in Chapter 8 from textbook "Automated Data Collection with R" by S.Munzert, C. Rubba, P. Meißner, and D. Nyhuis, are provided below.
+
+## Load packages
+```{r}
+library(stringr)
+```
+
+## Problem 3
+```{r }
+raw.data <- "555-1239Moe Szyslak(636) 555-0113Burns, C. Montgomery555-6542Rev. Timothy Lovejoy555 8904Ned Flanders636-555-3226Simpson, Homer5543642Dr. Julius Hibbert"
+
+names <- unlist(str_extract_all(raw.data, "[[:alpha:]., ]{2,}"))
+names           
+```
+
+### Part 1: Rearrange name vector into first_name last_name format
+The following could be done without using functions because the vector containg the names is very short. However, if the vector had a relatively large length with many changes to be done, doing the same task without functions would be very repetitive.
+
+As practice of using functions in R, I will use the function grepall as described in section 8.2 from the textbook and create another function to change the displayed order of a full name.
+
+```{r}
+grepall <- function(pattern, x, 
+                    ignore.case = FALSE, perl = FALSE, 
+                    fixed = FALSE, useBytes = FALSE, 
+                    value = FALSE, logic = FALSE){
+        # error and exception handling
+        if(length(pattern) == 0 | length(x) == 0){
+                warning("Length of pattern or data equals zero.")
+                return(NULL)
+        }
+        # apply grepl() and all()
+        indices <- sapply(pattern, grepl, x, ignore.case, perl, fixed, useBytes)
+        index <- apply(indices, 1, all)
+        # indexation and return of results
+        if(logic == T) return(index)
+        if(value == F) return((1:length(x))[index])
+        if(value == T) return(x[index])
+}
+```
+
+Identify the names listed as last name, first name and change the order.
+```{r}
+pattern <-"[[:alpha:]]+, [[:graph:] ]+"
+old <- grepall(pattern,names,value=T)
+indices <- grepall(pattern,names,value=F)
+old
+indices
+# function that change the order of names to first and last names
+new <- function(input){
+        n<-length(input)
+        flname <- vector('character')
+        for (i in 1:n){
+                split_name <- unlist(str_split(input[i],", "))
+                temp <- paste(split_name[2], split_name[1])
+                flname <- c(flname, temp)
+        }
+        return(flname)
+}
+
+names[indices] <- new(old)
+names
+
+```
+
+### Part 2: Logical vector indicating which of the characters have titles
+
+```{r}
+pattern <- "[ [:upper:]][[:lower:]]+\\."
+title <-str_detect(names, pattern)
+title
+```
+### Part 3: Logical vector indicating if any character has a middle name
+
+```{r}
+pattern <- "[:upper:]\\. [[:alpha:]]+ "
+middle_name <-str_detect(names, pattern)
+middle_name
+```
+
+## Problem 4
+
+Description of the following regular expressions with examples:
+
+1) [0-9]+\\$
+
+The regular expression returns a substring consisting of at least one of digits from 0 to 9 followed by character $.
+
+```{r}
+text<- " This is an example where digits appear: 111, 045$, 6.99, $401, 76$, 432$00."
+unlist(str_extract_all(text, '[[0-9]]+\\$'))
+```
+
+2) \\b[a-z]{1,4}\\b
+
+\\b indicates word edge, and so the expression returns whole word(s)  consisting of 1 to 4 letters from a to z.
+
+```{r}
+text<- " This is another example t2o what such expression wil1 return."
+unlist(str_extract_all(text, '\\b[a-z]{1,4}\\b'))
+```
+
+3) .*?\\.txt$
+
+$ indicates end of a string, and the expression returns the shortest possible sequence of any character zero or more times followed by the sequence of characters ".txt" in the end of the a string.
+
+```{r}
+text<- c("mydata.txt","main_data.txt.","xxx-data.txt", "data.txt contains all data.")
+unlist(str_extract_all(text, ".*?\\.txt$"))
+```
+
+4) .*?\\.txt$
+
+$ indicates end of a string, and the expression returns the shortest possible sequence of any character zero or more times followed by sequence of characters ".txt" in the end of the a string.
+
+```{r}
+text<- c("mydata.txt","main_data.txt.","xxx-data.txt", "data.txt contains all data.")
+unlist(str_extract_all(text, ".*?\\.txt$"))
+```
+
+5) \\d{2}/\\d{2}/\\d{4}
+
+The expression returns a sequence of characters in the date format xx/xx/xxxx (e.g., 09/15/2018).
+
+```{r}
+text<- c("Dec 14, 2001","This assignment is due on 09/16/2018.","Jane's birthday is 10/10/2010.", "When is yor birthday?")
+unlist(str_extract_all(text, "\\d{2}/\\d{2}/\\d{4}"))
+```
+
+6) <(.+?)>.+?</\\1>
+
+The regular expression returns a sequence of characters that describes a html tag. For example, "\<email\>some_email_address_here\</email\>". In the regular expression "\\1" is backreferencing to the substring from the expression "(.+?)".
+
+```{r}
+text<- ("<html>
+<body>
+<h1>This is heading 1</h1>
+<h2>This is heading 2</h2>
+<h3>This is heading 3</h3>
+<h4>This is heading 4</h4>
+<h5>This is heading 5</h5>
+<h6>This is heading 6</h6>
+</body>
+</html>")
+unlist(str_extract_all(text, "<(.+?)>.+?</\\1>"))
+```
+
+
+## Problem 9
+
+The secret message below is sequence of characters from th alpha (upper and lower), digit and punct classes. Let's first extract the elements of upper and lower alpha classes, separetely.
+
+```{r}
+msg <- "clcopCow1zmstc0d87wnkig7OvdicpNuggvhryn92Gjuwczi8hqrfpRxs5Aj5dwpn0TanwoUwisdij7Lj8kpf03AT5Idr3coc0bt7yczjatOaootj55t3Nj3ne6c4Sfek.r1w1YwwojigOd6vrfUrbz2.2bkAnbhzgv4R9i05zEcrop.wAgnb.SqoU65fPa1otfb7wEm24k6t3sR9zqe5fy89n6Nd5t9kc4fE905gmc4Rgxo5nhDk!gr"
+```
+
+```{r}
+lower <- str_extract_all(msg,"[[a-z]+]")
+lower
+```
+
+```{r}
+upper <- str_extract_all(msg,"[[A-Z]]+")
+upper
+```
+
+Bingo!! Now it is just to make it presentable. Note that in the original string each word is separated by a punctuation mark.
+
+```{r}
+meaning <- unlist(str_extract_all(msg,"[[A-Z]]+|[[:punct:]]"))
+meaning
+
+meaning <- str_c(meaning, collapse ="")
+meaning <- str_replace_all(meaning, pattern = "\\.+", replacement =" ")
+meaning
+```
