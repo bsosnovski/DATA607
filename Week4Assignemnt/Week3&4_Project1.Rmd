@@ -1,0 +1,138 @@
+---
+title: "Week3&4_Project1"
+author: "B. Sosnovski"
+date: "9/21/2018"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+```
+# Chess Tournament Results
+In this project, a text file with chess tournament results is given. The information in the file has some structure. 
+
+```{r pressure, echo=FALSE, fig.cap="tournament.txt - File structure", out.width = '60%'}
+knitr::include_graphics("tournament_pic.jpeg")
+
+```
+
+This RMarkdown doc shows how to generates a .CSV file with the following information for all of the players:
+Player’s Name, Player’s State, Total Number of Points, Player’s Pre-Rating, and Average Pre Chess Rating of Opponents
+For the first player, the information would be:
+Gary Hua, ON, 6.0, 1794, 1605
+
+1605 was calculated by using the pre-tournament opponents’ ratings of 1436, 1563, 1600, 1610, 1649, 1663, 1716, and dividing by the total number of games played.
+
+## Load Packages
+```{r}
+library(stringr)
+```
+
+## Read File
+```{r}
+txt <- readLines("tournamentinfo.txt", warn = F)
+head(txt)
+tail(txt)
+```
+
+
+## Extract the information
+```{r}
+names <- unlist(str_extract_all(txt, "\\d+ \\| [[:alpha:]- ]{2,}\\s+\\|"))
+names <- str_trim(unlist(str_extract_all(names, "[[:alpha:]- ]{2,}")))
+names[27:28]
+
+pattern <-"R:\\s+(\\d+)"
+pre_rates <- unlist(str_extract_all(txt, pattern))
+head(pre_rates)
+pre_rates <- gsub(pattern, "\\1", pre_rates)
+pre_rates <-as.integer(pre_rates)
+pre_rates
+
+states <- unlist(str_extract_all(txt, " [[:upper:]]{2} \\|"))
+states <- unlist(str_extract_all(states, "[[:upper:]]{2}"))
+states
+
+# Just the first 9 backreferences are included in the pattern below
+pattern1 <-"(\\d\\.\\d)\\s+\\|([[:upper:]])\\s+(\\d{0,2}?)\\|([[:upper:]])\\s+(\\d{0,2}?)\\|([[:upper:]])\\s+(\\d{0,2}?)\\|([[:upper:]])\\s+(\\d{0,2}?)\\|[[:upper:]]\\s+\\d{0,2}?\\|[[:upper:]]\\s+\\d{0,2}?\\|[[:upper:]]\\s+\\d{0,2}?\\|"
+scores1 <- unlist(str_extract_all(txt,pattern1))
+scores1[1:5]
+pts <- gsub(pattern1, "\\1", scores1)
+pts <- as.numeric(pts)
+pts[1:5]
+r1_status <- gsub(pattern1, "\\2", scores1)
+r1_status[1:5]
+r1_opponent <- gsub(pattern1, "\\3", scores1)
+r1_opponent <- as.integer(r1_opponent)
+r1_opponent[1:5]
+r2_status <- gsub(pattern1, "\\4", scores1)
+r2_opponent <- gsub(pattern1, "\\5", scores1)
+r2_opponent <- as.integer(r2_opponent)
+tail(r2_opponent)
+r3_status <- gsub(pattern1, "\\6", scores1)
+r3_opponent <- gsub(pattern1, "\\7", scores1)
+r3_opponent <- as.integer(r3_opponent)
+r4_status <- gsub(pattern1, "\\8", scores1)
+r4_opponent <- gsub(pattern1, "\\9", scores1)
+r4_opponent <- as.integer(r4_opponent)
+```
+
+Because we can only use backreferences \\1 through \\9 in the replacement text, a new pattern is used to include backreferences for rounds 5 to 7 in each string.
+
+```{r}
+# text pattern backreferenced in the end of each string
+pattern2 <-"\\d\\.\\d\\s+\\|[[:upper:]]\\s+\\d{0,2}?\\|[[:upper:]]\\s+\\d{0,2}?\\|[[:upper:]]\\s+\\d{0,2}?\\|[[:upper:]]\\s+\\d{0,2}?\\|([[:upper:]])\\s+(\\d{0,2}?)\\|([[:upper:]])\\s+(\\d{0,2}?)\\|([[:upper:]])\\s+(\\d{0,2}?)\\|"
+scores2 <- unlist(str_extract_all(txt,pattern2))
+r5_status <- gsub(pattern2, "\\1", scores2)
+r5_opponent <- gsub(pattern2, "\\2", scores2)
+r5_opponent <- as.integer(r5_opponent)
+head(r5_status)
+r6_status <- gsub(pattern2, "\\3", scores2)
+r6_opponent <- gsub(pattern2, "\\4", scores2)
+r6_opponent <- as.integer(r6_opponent)
+r7_status <- gsub(pattern2, "\\5", scores2)
+r7_opponent <- gsub(pattern2, "\\6", scores2)
+r7_opponent <- as.integer(r7_opponent)
+tail(r7_opponent)
+```
+
+## Data Frame
+```{r}
+df <- data.frame("Name"=names, "State"=states,"Total.Pts"=pts, "R1.Player"=r1_opponent, "R2.Player"=r2_opponent, "R3.Player"=r3_opponent, "R4.Player"=r4_opponent, "R5.Player"=r5_opponent, "R6.Player"=r6_opponent, "R7.Player"=r7_opponent,"Pre rating"=pre_rates, stringsAsFactors = F)
+head(df)
+sapply(df, class)
+dim(df)
+```
+
+## Average Pre-Ratings of Opponent Players
+The following function collects the non-NA values of the oppenents for player and compute the average of pre-ratings of the opponents.
+```{r}
+avrg <- function(df){
+        avrg_vec <- vector('numeric')
+        values <- df[,11]
+        for (i in 1:64){
+                index <- which(!is.na(df[i,4:10]))
+                opponents <- as.integer(df[i,4:10][index])
+                temp <- round(mean(values[opponents]),0)
+                avrg_vec <- c(avrg_vec,temp)
+        }
+        return(avrg_vec)
+}
+```
+
+Now applying the function above to the data frame:
+```{r}
+averages <- avrg(df)
+ExtraCol <-data.frame("Average"=averages)
+df <-cbind(df,ExtraCol)
+df[c(1:4,12),]
+```
+
+## Export the Data Frame to a CSV File
+
+```{r}
+write.csv(df,'ChessTournment.csv')
+```
