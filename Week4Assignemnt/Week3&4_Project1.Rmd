@@ -14,10 +14,8 @@ opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
 # Chess Tournament Results
 In this project, a text file with chess tournament results is given. The information in the file has some structure. 
 
-```{r pressure, echo=FALSE, fig.cap="tournament.txt - File structure", out.width = '60%'}
-knitr::include_graphics("tournament_pic.jpeg")
 
-```
+![tournamentinfo.txt - File structure.](https://i.imgur.com/AlWfXvc.jpg){ width=65% }
 
 This RMarkdown doc shows how to generates a .CSV file with the following information for all of the players:
 Player’s Name, Player’s State, Total Number of Points, Player’s Pre-Rating, and Average Pre Chess Rating of Opponents
