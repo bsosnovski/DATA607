@@ -1,0 +1,111 @@
+---
+title: "Week5_Assignment"
+author: "B. Sosnovski"
+date: "9/27/2018"
+output: 
+  html_document: 
+    theme: cerulean
+---
+
+```{r setup, include=FALSE, warning = FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Tidying and Transforming Data
+Information is read from a csv file into R. The data has a "wide" structure. In this assigment, we practice tidying and tranforming the data, and also performing some analysis.
+
+## Load packages
+
+```{r}
+library(readr)
+library(knitr)
+library(kableExtra)# manipulate table styles
+suppressMessages(library(zoo))
+suppressMessages(library(tidyr))
+suppressMessages(library(dplyr))
+```
+
+## Read the data
+
+```{r}
+wide_df <- read_csv("info.csv")
+colnames(wide_df)[1] <- "Airline"
+colnames(wide_df)[2] <- "Status"
+
+
+kable(wide_df)%>%
+        kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+## Adjust data
+Use filter and any_vars functions from dplyr to remove the empty row (all vars are NAs).
+
+```{r}
+kable(wide_df <- wide_df %>% filter_all(any_vars(!is.na(.))))%>%
+        kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+Also  use na.locf function from zoo package to replace each NA with the most recent non-NA prior to it.
+
+```{r}
+kable(wide_df <- wide_df %>% na.locf())%>%
+        kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+## Tidying the data
+The variables containing in the data are airline, status, destination and count. This data is considered to be wide format because the variable destination is structured as if each city is a variable.
+
+Let's reshape the data into the long format by taking the counts for each city and combining them into one single column.
+
+```{r}
+kable(long_df <- gather(wide_df, Destination, Count,3:7))%>%
+        kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+Next we reshape the data in long format to have each status in its own column.
+
+```{r}
+df <- spread(long_df, Status, Count)
+colnames(df)[3] <- "Delayed"
+colnames(df)[4] <- "On_Time"
+kable(df)%>%
+        kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+## Analysis
+
+#### Analysis 1
+
+In average, what destination(s) had the most delayed flights and the least on-time flights?
+
+```{r}
+kable(means <- df %>% group_by(Destination) %>% summarise(Mean_Delayed = mean(Delayed), Mean_On_Time = mean(On_Time)))%>%
+        kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+We see that Phoenix as destination for both airlines had the most number of flights delayed in average. And San Diego had the least number of flights on time in average. 
+
+#### Analysis 2
+
+From the given data, what airline was most likely to have delayed flights?
+Alternatively, one may ask which airline was least likely to be on time.
+
+For each airline, we compute the probability of having a flight delayed and/or the probability of having a flight on time.
+
+(number of an airline's delayed flights) / (number of all delayed flights)
+
+(number of an airline's on-time flights) / (number of all on-time flights)
+
+```{r}
+new_df <- df %>% group_by(Airline) %>%
+        summarise(Freq_Delayed=sum(Delayed), Freq_OnTime=sum(On_Time))
+
+new_df <- new_df %>% group_by(Airline) %>%
+        mutate(Prob_Delayed=Freq_Delayed/sum(Freq_Delayed,Freq_OnTime),    Prob_OnTime=Freq_OnTime/sum(Freq_Delayed,Freq_OnTime))
+
+kable(new_df)%>%
+        kable_styling(bootstrap_options = "striped", full_width = F)
+
+```
+
+Therefore, Alaska is the most likely airline to have delayed flights and also least likely to have flights on time. Based on the given information, one might consider not to buy plane tickets from Alaska Airlines.
