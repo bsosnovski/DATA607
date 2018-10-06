@@ -39,7 +39,6 @@ _____________________________________________________________________
 ```{r}
 library(knitr)
 library(XML)
-library(kableExtra)# manipulate table styles
 suppressMessages(library(RCurl))
 suppressMessages(library(tidyverse))
 ```
@@ -69,7 +68,7 @@ urls
 We create a dataframe with empty vectors to storage all the information that is going to be read from the website.
 
 ```{r}
-movie_df <- data.frame(V1 = character(0), V2 = character(0), V3 = character(0), V4 = numeric(0), V5 = numeric(0), V6 = numeric(0), V7 = numeric(0), V8 = numeric(0), V9=numeric(0), stringsAsFactors = FALSE)
+movie_df <- data.frame(V1 = character(0), V2 = character(0), V3 = character(0), V4 = character(0), V5 = character(0), V6 = character(0), V7 = character(0), V8 = character(0), V9=character(0), stringsAsFactors = FALSE)
 
 sapply(movie_df, class)
 ```
@@ -86,39 +85,49 @@ for (i in 1:8){
         data <- readHTMLTable(parsedData, skip.rows =1 , stringsAsFactors = FALSE)
         table <- data[[2]]
         
-        # Identify the box office values in the thounsands and convert to millions:
-        # For example, we want to extract the string "18.1" from "$18.1k", then convert
-        # to numeric and divide by 10000.
-        for (k in c(4,5,6)){
-                indices <- grep(".k$",table[,k],value=F)
-                if(length(indices)>0){
-                        values <- grep(".k$",table[,k],value=T)
-                        cat("Before... ",values, "\n")
-                        tempVal <- unlist(str_extract_all(values,'[\\d\\.]+'))
-                        tempVal <- as.numeric(as.character(tempVal))
-                        tempVal <- as.character(tempVal/1000)
-                        cat("After... ",tempVal, "\n\n")
-                        table[indices,k] <- tempVal
-                }
-        }
-        
-        # Removing the symbols $, % and ^ from all the other columns and changing them to numeric type in R:
-        for(j in seq(4,9)){
-                table[,j] <- suppressWarnings(as.numeric(gsub("[%,\\$\\^]","", table[,j])))
-        }
-        
         # combine dataframes
-        movie_df <- suppressWarnings(bind_rows(movie_df, table))
+        movie_df <- suppressWarnings(bind_rows(movie_df, table)) 
+}    
+
+tbl_df(movie_df)
+```
+
+We identify the box office values in the thounsands and convert to millions.
+
+For example, we want to extract the string "18.1" from "$18.1k", then convert to numeric and divide by 10000.
+
+```{r}
+for (k in c(4,5,6)){
+        indices <- grep(".k$",movie_df[,k],value=F)
+        if(length(indices)>0){
+                values <- grep(".k$",movie_df[,k],value=T)
+                cat("Before... ",values, "\n")
+                tempVal <- unlist(str_extract_all(values,'[\\d\\.]+'))
+                tempVal <- as.numeric(as.character(tempVal))
+                tempVal <- as.character(tempVal/1000)
+                cat("After... ",tempVal, "\n\n")
+                movie_df[indices,k] <- tempVal
+                print("This the result of the changes...")
+                print(movie_df[indices,])
+        }
 }
+
+```
+
+
+Removing the symbols $, % and ^ from all the other columns and changing them to numeric type in R.
+
+```{r}
+for(j in seq(4,9)){
+        movie_df[,j] <- suppressWarnings(as.numeric(gsub("[%,\\$\\^]","", movie_df[,j])))
+}
+
 sapply(movie_df, class)
 ```
 
-Rename the columns of the movie_df:
+And rename the columns of the movie_df.
 
 ```{r}
 colnames(movie_df) <- c( "Rank", "Title" , "Studio", "Worldwide", "Domestic", "Domestic.Perc", "Overseas", "Overseas.Perc", "Year")
 tbl_df(movie_df)
-```
-
-
 ```
