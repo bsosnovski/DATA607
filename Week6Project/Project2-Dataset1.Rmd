@@ -7,11 +7,13 @@ output:
     theme: cerulean
 ---
 
+As a first step, we came up with a stategy for working on the assignment together. First, we picked the 3 datasets we were interested in analyzing. Then we each picked one dataset to take a lead on after discussing some basic strategies. We worked on those individually, collaborating and reaching out to each other with questions. That gave us an opportunity to perfect our data wrangling and collaboration skils. Then we worked on a 3rd dataset together.
+
 ```{r setup, include=FALSE, warning = FALSE, message=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Dataset
+# Dataset 1
 
 The dataset contains information from the U.S. Department of Agriculture about the longitude and latitude, state, address, name, zip code, etc, of Farmers Markets in the United States. The data is considered to be wide format because, for example, the variable produce/product is structured as if every single type of produce/product is a variable.
 
@@ -156,5 +158,3 @@ In addition to a frequency table, we can also graph a bar plot of the number of 
 ##### Conclusion:
 
 Data shows that most of the markets sell vegetables and baked goods. 
-
-
