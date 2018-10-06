@@ -1,0 +1,103 @@
+---
+title: "Project 2 - Dataset 3"
+author: "E. Azrilyan and B. Sosnovski"
+date: "10/04/2018"
+output: 
+  html_document: 
+    theme: cerulean
+---
+
+```{r setup, include=FALSE, warning = FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Dataset
+
+The website has information about the movies spread in 8 webpages.
+
+## Load packages
+```{r}
+library(knitr)
+library(XML)
+library(kableExtra)# manipulate table styles
+suppressMessages(library(RCurl))
+suppressMessages(library(tidyverse))
+```
+
+
+## Function that creates a vector with all links to be accessed to retrieve data
+
+```{r}
+start_url <- "https://www.boxofficemojo.com/alltime/world/?pagenum="
+end_url <- "&p=.htm"
+# function
+pages <- function(n){
+        urls <- vector('character')
+        for (i in 1:n){
+                temp <- str_c(start_url,i,end_url, collapse = "")
+                urls <- c(urls, temp)
+        }
+        return(urls)
+}
+
+urls <-pages(8)
+urls
+```
+
+## Parsing data from web site
+
+We creating a dataframe with empty vectors to storage all the information that is going to be read from the website.
+
+```{r}
+movie_df <- data.frame(V1 = numeric(0), V2 = character(0), V3 = character(0), V4 = numeric(0), V5 = numeric(0), V6 = numeric(0), V7 = numeric(0), V8 = numeric(0), V9=numeric(0), stringsAsFactors = FALSE)
+
+sapply(movie_df, class)
+```
+
+Now we retrieve the information from each page, parse it and append to the above dataframe.
+
+Tyding the data will also be performed in this step, since the numerical data contains the symbols $, % and ^.
+
+```{r}
+for (i in 1:8){
+        url <-urls[i]
+        htmlData <- getURL(url)
+        parsedData <-htmlParse(htmlData, encoding = "UTF-8")
+        data <- readHTMLTable(parsedData, skip.rows =1 )
+        table <- data[[2]]
+        # Converting the type of columns 1 to character type:
+        table[,1] <- suppressWarnings(as.numeric(table[,1])) 
+        #Converting the type of columns 2 and 3 to character type:
+        for(j in seq(2,3)){
+                table[,j] <- as.character(table[,j])
+        }
+        # Removing the symbols $, % and ^ from the numerical columns and changing them to numeric type in R:
+        for(j in seq(4,9)){
+                table[,j] <- suppressWarnings(as.numeric(gsub("[\\$%\\^,]","", table[,j])))
+        }
+        movie_df <- rbind(movie_df, table, sort = F)
+
+}
+sapply(movie_df, class)
+head(movie_df)
+dim(movie_df)
+```
+
+Because some of the gross values are in the thousands (they appear on the webpages with k), R replace it with NAs.
+
+
+Rename the columns of the movie_df:
+
+```{r}
+colnames(movie_df) <- c( "Rank", "Title" , "Studio", "Worldwide", "Domestic", "Domestic.Perc", "Overseas", "Overseas.Perc", "Year")
+
+head(movie_df)
+```
+
+
+How to order the datafram?? 
+```{r}
+#new_df <- movie_df[order(movie_df$Rank),]
+
+
+```
