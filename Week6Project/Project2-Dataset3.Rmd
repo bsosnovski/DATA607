@@ -11,11 +11,31 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+
 # Dataset
+
+The data is obtained from the website BoxOfficeMojo, which has detailed data concerning the box office totals for on going movie releases.  
+
+URL: https://www.boxofficemojo.com/alltime/world/
 
 The website has information about the movies spread in 8 webpages.
 
-## Load packages
+
+# Tidying, transforming and analyzing Data
+
+Information is read from BoxOfficeMojo into R.
+
+We will perfom analyses in this project to answer the following questions:
+
+* Do certain movie studios have a higher percentage of domestic grosses?
+
+* Has the percentage of international grosses gone up recently (I'm defining "recent" this as the last decade or so)? 
+
+* Have movies been getting more popular, grossing more money lately? 
+
+_____________________________________________________________________
+
+### Load packages
 ```{r}
 library(knitr)
 library(XML)
@@ -25,7 +45,7 @@ suppressMessages(library(tidyverse))
 ```
 
 
-## Function that creates a vector with all links to be accessed to retrieve data
+### Function that creates a vector with all links to be accessed to retrieve data
 
 ```{r}
 start_url <- "https://www.boxofficemojo.com/alltime/world/?pagenum="
@@ -44,12 +64,12 @@ urls <-pages(8)
 urls
 ```
 
-## Parsing data from web site
+### Parsing data from web site
 
-We creating a dataframe with empty vectors to storage all the information that is going to be read from the website.
+We create a dataframe with empty vectors to storage all the information that is going to be read from the website.
 
 ```{r}
-movie_df <- data.frame(V1 = numeric(0), V2 = character(0), V3 = character(0), V4 = numeric(0), V5 = numeric(0), V6 = numeric(0), V7 = numeric(0), V8 = numeric(0), V9=numeric(0), stringsAsFactors = FALSE)
+movie_df <- data.frame(V1 = character(0), V2 = character(0), V3 = character(0), V4 = numeric(0), V5 = numeric(0), V6 = numeric(0), V7 = numeric(0), V8 = numeric(0), V9=numeric(0), stringsAsFactors = FALSE)
 
 sapply(movie_df, class)
 ```
@@ -63,41 +83,42 @@ for (i in 1:8){
         url <-urls[i]
         htmlData <- getURL(url)
         parsedData <-htmlParse(htmlData, encoding = "UTF-8")
-        data <- readHTMLTable(parsedData, skip.rows =1 )
+        data <- readHTMLTable(parsedData, skip.rows =1 , stringsAsFactors = FALSE)
         table <- data[[2]]
-        # Converting the type of columns 1 to character type:
-        table[,1] <- suppressWarnings(as.numeric(table[,1])) 
-        #Converting the type of columns 2 and 3 to character type:
-        for(j in seq(2,3)){
-                table[,j] <- as.character(table[,j])
+        
+        # Identify the box office values in the thounsands and convert to millions:
+        # For example, we want to extract the string "18.1" from "$18.1k", then convert
+        # to numeric and divide by 10000.
+        for (k in c(4,5,6)){
+                indices <- grep(".k$",table[,k],value=F)
+                if(length(indices)>0){
+                        values <- grep(".k$",table[,k],value=T)
+                        cat("Before... ",values, "\n")
+                        tempVal <- unlist(str_extract_all(values,'[\\d\\.]+'))
+                        tempVal <- as.numeric(as.character(tempVal))
+                        tempVal <- as.character(tempVal/1000)
+                        cat("After... ",tempVal, "\n\n")
+                        table[indices,k] <- tempVal
+                }
         }
-        # Removing the symbols $, % and ^ from the numerical columns and changing them to numeric type in R:
+        
+        # Removing the symbols $, % and ^ from all the other columns and changing them to numeric type in R:
         for(j in seq(4,9)){
-                table[,j] <- suppressWarnings(as.numeric(gsub("[\\$%\\^,]","", table[,j])))
+                table[,j] <- suppressWarnings(as.numeric(gsub("[%,\\$\\^]","", table[,j])))
         }
-        movie_df <- rbind(movie_df, table, sort = F)
-
+        
+        # combine dataframes
+        movie_df <- suppressWarnings(bind_rows(movie_df, table))
 }
 sapply(movie_df, class)
-head(movie_df)
-dim(movie_df)
 ```
-
-Because some of the gross values are in the thousands (they appear on the webpages with k), R replace it with NAs.
-
 
 Rename the columns of the movie_df:
 
 ```{r}
 colnames(movie_df) <- c( "Rank", "Title" , "Studio", "Worldwide", "Domestic", "Domestic.Perc", "Overseas", "Overseas.Perc", "Year")
-
-head(movie_df)
+tbl_df(movie_df)
 ```
-
-
-How to order the datafram?? 
-```{r}
-#new_df <- movie_df[order(movie_df$Rank),]
 
 
 ```
