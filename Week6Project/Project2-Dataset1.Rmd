@@ -40,7 +40,7 @@ suppressMessages(library(tidyverse))
 ## Read the data
 
 ```{r}
-df <- read.csv("Export.csv")
+df <- read.csv(file="https://raw.githubusercontent.com/che10vek/Data-607-Assignments/master/Export.csv", header=TRUE, sep=",")
 str(df, give.attr = F) # with not to show attributes as substructures. If T then str is really long... 
 ```
 
