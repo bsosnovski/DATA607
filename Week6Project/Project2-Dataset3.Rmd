@@ -11,6 +11,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+As a first step, we came up with a stategy for working on the assignment together. First, we picked the 3 datasets we were interested in analyzing. Then we each picked one dataset to take a lead on after discussing some basic strategies. We worked on those individually, collaborating and reaching out to each other with questions. That gave us an opportunity to perfect our data wrangling and collaboration skils. Then we worked on a 3rd dataset together.
 
 # Dataset
 
@@ -39,7 +40,6 @@ _____________________________________________________________________
 ```{r}
 library(knitr)
 library(XML)
-suppressMessages(library(dplyr))
 suppressMessages(library(RCurl))
 suppressMessages(library(tidyverse))
 ```
@@ -137,27 +137,13 @@ tbl_df(movie_df)
 
 ###1. Do certain movie studios have a higher percentage of domestic grosses?
 
-Let's calculate the ratio of domestic to international grosses and sort to see the top 10 studios with the highest domestic grosses are. 
+Let's sort the domestic grosses to see what the top 10 studios are. 
+
 
 ```{r}
-movie_df$DIRatio <- round(movie_df$Domestic.Perc/movie_df$Overseas.Perc,2)
-head(movie_df)
-```
-
-Now we can find the top studios with the highest Ratio of Domestic to International percentages:
-
-```{r}
-
-#Option 1 - averaging out ratio of domestic percentages
-StudioData<-movie_df %>% group_by(Studio) %>%
-  summarise(mean=round(mean(DIRatio),2))
-StudioData[order(StudioData$mean,decreasing=T)[1:10],]
-
-#Option 2 - Averaging out domestic percentages 
 StudioData2<-movie_df %>% group_by(Studio) %>%
   summarise(mean=round(mean(Domestic.Perc),2))
 StudioData2[order(StudioData2$mean,decreasing=T)[1:10],]
-
 ```
 
 ###2. Has the percentage of international grosses gone up recently (I'm defining "recent" this as the last decade or so)? 
