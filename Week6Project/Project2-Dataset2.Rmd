@@ -1,0 +1,131 @@
+---
+title: "Project 3 Dataset 2"
+author: "E. Azrilyan and B. Sosnovski"
+date: "10/04/2018"
+output: 
+  html_document: 
+    theme: cerulean
+---
+
+As a first step, we came up with a stategy for working on the assignment together. First, we picked the 3 datasets we were interested in analyzing. Then we each picked one dataset to take a lead on after discussing some basic strategies. We worked on those individually, collaborating and reaching out to each other with questions. That gave us an opportunity to perfect our data wrangling and collaboration skils. Then we worked on a 3rd dataset together.
+
+```{r message=FALSE}
+#install.packages("tidyverse")
+#install.packages("dplyr")
+require(dplyr)
+require(tidyr)
+```
+
+The source of the data that I am analyzing is located in the following location: http://bit.ly/tardistravels. The reference to this dataset was found in the following article: https://www.theguardian.com/news/datablog/2010/aug/20/doctor-who-time-travel-information-is-beautiful.
+
+This dataset includes details of time travel dates on the TV Show Doctor Who. The classic era of the show has been airing since 1963 to 1987. The new era has started in 2005. This data includes episodes through 2011 only. This is data for 11 incarnations of the Doctor. I am going to compare time travel span between classis and new era episodes. My theory is that due to the technology limitations at the time the classis episodes were aired there will be limited time travel. I will also determine what's the average number of years each doctor gets to travel through during their tenure and identify which Doctor gets to time travel the most/least?
+
+### Step 1. Reading in the data: 
+
+```{r}
+DWData <- read.csv(file="https://raw.githubusercontent.com/che10vek/Data-607-Assignments/master/Copy%20of%20Doctor%20Who%20Time%20Travel%20Journeys%20-%20Copy%20of%20DM_mastersheet%201.csv", header=TRUE, sep=",")
+head(DWData)
+```
+
+### Step 2 Cleaning up the data and preparing it for analysis
+
+Since none of my questions apply to location information - I am going to get rid of that data and keep the time travel details only.
+
+```{r}
+DWTime <- subset(DWData, select=Doctor.Who.season:to)
+head(DWTime)
+```
+
+After visually inspecing the data, I am going to assume that "Estimated From" is a more accurate variable for measuring the beginning of time travel journey. The original "From" column seems to include same data as "to" column if the beginning time is not explicitely stated. I am going to replace the data in "From" column with "Estimated From" since that seems to provide a more accurate picture. 
+
+```{r}
+DWTime$estimated.from[is.na(DWTime$estimated.from)] <- as.character(DWTime$from[is.na(DWTime$estimated.from)])
+
+#the code below removes "," which are present in certain fields.
+DWTime[,'estimated.from'] <- gsub(",","",DWTime[,'estimated.from'])
+head(DWTime)
+```
+
+Now we can remove "from" variable
+
+```{r}
+DWTime$from <- NULL
+head(DWTime)
+```
+
+Let's calculate time travel span.
+
+```{r, message=FALSE}
+DWTime$Span = (as.numeric(as.character(DWTime$to))) - as.numeric(as.character(DWTime$estimated.from))
+
+#since we don't care where the travel is back in time or forward in time - we are taking absolute values
+
+DWTime$Span<-abs(DWTime$Span)
+
+head(DWTime)
+```
+
+Now let's make out dataset Wide.
+```{r}
+DWWide<-spread(DWTime, doctor.actor, Span)
+head(DWWide)
+DWWide$V1 <- NULL
+
+# I noticed that the cell below has an empty value and I am adding the correct number just because I know what it is. If this error was not visible I would not be able to make this correction and it would just be excluded from calculation. 
+
+DWWide[3, 1] = 9
+```
+
+Now I am removing some blank values.
+```{r}
+DWWide <- subset(DWWide, DWWide$episode.title != "") 
+head(DWWide)
+```
+
+### Step 3. Analyzing results.
+
+From the summary below we can see glimpses of a lot of information, things like most frequently visited year (2010), which seasons have the most time travel (10,11), which episodes have the most time jumps. 
+
+```{r}
+summary(DWWide)
+```
+
+Let's compare average travel years for classic Era
+
+```{r}
+#Classis Era Average
+mean(DWTime$Span[DWTime$Doctor.Who.season ==1 | DWTime$Doctor.Who.season ==2 | DWTime$Doctor.Who.season ==3 | DWTime$Doctor.Who.season ==4 | DWTime$Doctor.Who.season ==5 | DWTime$Doctor.Who.season ==6 | DWTime$Doctor.Who.season == 7 |DWTime$Doctor.Who.season ==8], na.rm = TRUE)
+
+#New Era Average
+mean(DWTime$Span[DWTime$Doctor.Who.season ==9 | DWTime$Doctor.Who.season ==10 | DWTime$Doctor.Who.season ==11], na.rm = TRUE)
+
+#Classis Era Sum
+sum(DWTime$Span[DWTime$Doctor.Who.season ==1 | DWTime$Doctor.Who.season ==2 | DWTime$Doctor.Who.season ==3 | DWTime$Doctor.Who.season ==4 | DWTime$Doctor.Who.season ==5 | DWTime$Doctor.Who.season ==6 | DWTime$Doctor.Who.season == 7 |DWTime$Doctor.Who.season ==8], na.rm = TRUE)
+
+#New Era Sum
+sum(DWTime$Span[DWTime$Doctor.Who.season ==9 | DWTime$Doctor.Who.season ==10 | DWTime$Doctor.Who.season ==11], na.rm = TRUE)
+```
+My initial assumption was correct - New Era has more time travel than Classic Episodes. 
+
+Now, we can see which incarnations of the Doctor traveled in time the most.
+
+```{r}
+DWDoctors<-DWWide %>%
+  select ("Baker", "Colin Baker", "Davison", "Hartnell", "McCoy", "McGann", "Pertwee", "Troughton", "Eccleston", "Smith", "Tennant")
+
+#Average
+sort(apply(DWDoctors, 2, mean, na.rm=TRUE), decreasing = TRUE)
+#Sum of all time travel years
+sort(apply(DWDoctors, 2, sum, na.rm=TRUE), decreasing = TRUE)
+
+```
+
+1st Place: Tennant (New Era), 2nd Place: Baker (Classic Episodes), 3rd Place: Davidson(Classic Episodes)
+
+```{r}
+DWClassic<-DWWide %>%
+  select ("Baker", "Colin Baker", "Davison", "Hartnell", "McCoy", "McGann", "Pertwee", "Troughton")
+
+DWNew<-DWWide %>%
+  select ("Eccleston", "Smith", "Tennant")
+```
