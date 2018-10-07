@@ -39,6 +39,7 @@ _____________________________________________________________________
 ```{r}
 library(knitr)
 library(XML)
+suppressMessages(library(dplyr))
 suppressMessages(library(RCurl))
 suppressMessages(library(tidyverse))
 ```
@@ -131,3 +132,73 @@ And rename the columns of the movie_df.
 colnames(movie_df) <- c( "Rank", "Title" , "Studio", "Worldwide", "Domestic", "Domestic.Perc", "Overseas", "Overseas.Perc", "Year")
 tbl_df(movie_df)
 ```
+
+##Analysis
+
+###1. Do certain movie studios have a higher percentage of domestic grosses?
+
+Let's calculate the ratio of domestic to international grosses and sort to see the top 10 studios with the highest domestic grosses are. 
+
+```{r}
+movie_df$DIRatio <- round(movie_df$Domestic.Perc/movie_df$Overseas.Perc,2)
+head(movie_df)
+```
+
+Now we can find the top studios with the highest Ratio of Domestic to International percentages:
+
+```{r}
+
+#Option 1 - averaging out ratio of domestic percentages
+StudioData<-movie_df %>% group_by(Studio) %>%
+  summarise(mean=round(mean(DIRatio),2))
+StudioData[order(StudioData$mean,decreasing=T)[1:10],]
+
+#Option 2 - Averaging out domestic percentages 
+StudioData2<-movie_df %>% group_by(Studio) %>%
+  summarise(mean=round(mean(Domestic.Perc),2))
+StudioData2[order(StudioData2$mean,decreasing=T)[1:10],]
+
+```
+
+###2. Has the percentage of international grosses gone up recently (I'm defining "recent" this as the last decade or so)? 
+
+To answer that question, let's calculate the average % of overseas grosses in the last decade and compare it with the % in earlier years. 
+
+```{r}
+#Average International gross percentages between 2008 and 2018
+movie_df %>% filter(Year>=2008) %>%
+  summarise(mean=mean(Overseas.Perc))
+
+#Average International gross percentages before 2008
+movie_df %>% filter(Year<2008) %>%
+  summarise(mean=mean(Overseas.Perc))
+```
+
+We can conclude that it seems that International grosses have gone up in the last decade.
+
+###3. Have movies been getting more popular, grossing more money lately? 
+
+To answer that question, let's calculate the average total gross dollars in the last decade and compare it with the dollars in earlier years. 
+
+```{r}
+#Average total gross dollars between 2008 and 2018
+movie_df %>% filter(Year>=2008) %>%
+  summarise(mean=mean(Worldwide))
+
+#Average total gross dollars before 2008
+movie_df %>% filter(Year<2008) %>%
+  summarise(mean=mean(Worldwide))
+```
+
+We can conclude that movies have been grossing more money in the past decade. 
+
+```{r}
+plot(movie_df$Year, movie_df$Worldwide, 
+   xlim=c(1938,2018),
+   main = "Worldwide Movie Grosses",
+   xlab = "Year",
+   ylab = "Worlwide Gross Dollars (Millions)"
+)
+```
+
+The graph above illustrated that visually as well. There seems to be more top films in recent years.
