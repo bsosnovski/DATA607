@@ -2,21 +2,21 @@
 <book_list>
   <book id="1">
     <title>Introduction to Modern Cryptography: Principles and Protocols</title>
-    <author>author1="Jonathan Katz" author2="Yehuda Lindell"/>
+    <author> author1="Jonathan Katz" author2="Yehuda Lindell"/>
     <year>2007</year>
     <publiher>Chapman &amp; Hall/CRC</publiher>
     <pages>552</pages>
   </book>
   <book id="2">
     <title>An Introduction to Mathematical Cryptography</title>
-    <author>author1="Jeffrey Hoffstein" author2="Jill Pipher"/>
+    <author> author1="Jeffrey Hoffstein" author2="Jill Pipher"/>
     <year>2014</year>
     <publiher>Springer</publiher>
     <pages>538</pages>
   </book>
   <book id="3">
     <title>Thank You for Being Late: An Optimist&apos; s Guide to Thriving in the Age of Accelerations</title>
-    <author>author1="Thomas L. Friedman"/>
+    <author> author1="Thomas L. Friedman"/>
     <year>2016</year>
     <publiher>Farrar, Straus and Giroux</publiher>
     <pages>497</pages>
