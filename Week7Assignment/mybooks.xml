@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <book_list>
   <book id="1">
+    <id>1</id>
     <title>Introduction to Modern Cryptography: Principles and Protocols</title>
     <author1>Jonathan Katz</author1>
     <author2>Yehuda Lindell</author2>
@@ -9,6 +10,7 @@
     <pages>552</pages>
   </book>
   <book id="2">
+    <id>2</id>
     <title>An Introduction to Mathematical Cryptography</title>
     <author1>Jeffrey Hoffstein</author1>
     <author2>Jill Pipher</author2>
@@ -17,7 +19,8 @@
     <pages>538</pages>
   </book>
   <book id="3">
-    <title>Thank You for Being Late: An Optimist&apos;s Guide to Thriving in the Age of Accelerations</title>
+    <id>3</id>
+    <title>Thank You for Being Late: An Optimist&apos; s Guide to Thriving in the Age of Accelerations</title>
     <author1>Thomas L. Friedman</author1>
     <author2></author2>
     <year>2016</year>
