@@ -1,0 +1,90 @@
+---
+title: "Week 7 Assignment"
+author: "B. Sosnovski"
+date: "10/13/2018"
+output: 
+  html_document: 
+    theme: cerulean
+---
+# Assignment Overview
+
+In this assignment, we are required to create three files in HTML table, XML, and JSON formats. The files contain information about three of our favorite books in a particular subject area, with at least one book having multiple authors. 
+
+My choices don't necessarily are my favorite books since two of the chosen books were are excellent references in cryptography, my research field.
+
+We use R to load the information from each of the three sources into separate R data frames. We investigate if the three data frames identical or not.
+
+_____________________________________________________________________
+
+```{r setup, include=FALSE, warning = FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Packages
+
+```{r}
+library(knitr)
+library(kableExtra)# manipulate table styles
+library(XML)
+suppressMessages(library(RCurl))
+library(jsonlite)
+```
+
+## Read and Parse Data
+
+
+#### HTML
+
+```{r}
+html.url <- "https://raw.githubusercontent.com/bsosnovski/DATA607/master/Week7Assignment/mybooks.html"
+htmlData <- getURL(html.url)
+html_parsed <-htmlParse(htmlData, encoding = "UTF-8")
+html_parsed
+class(html_parsed)
+htmlData <- readHTMLTable(html_parsed, stringsAsFactors = FALSE)
+html_df <- htmlData[[1]] #without this codeline there is a 'NULL' printed in the first line of htmlTable.
+class(html_df)
+kable(html_df) %>% kable_styling(bootstrap_options = "striped")
+```
+
+#### XML
+
+```{r}
+xml.url <- "https://raw.githubusercontent.com/bsosnovski/DATA607/master/Week7Assignment/mybooks.xml"
+xmlData <- getURL(xml.url)
+xml_parsed <- xmlParse(xmlData)
+xml_parsed
+class(xml_parsed)
+
+xml_df <- xmlToDataFrame(xml_parsed)
+colnames(xml_df) <- c("ID", "Title", "Author 1", "Author 2","Publication Year", "Publisher", "Number of Pages")
+class(xml_df)
+kable(xml_df) %>% kable_styling(bootstrap_options = "striped")
+
+```
+
+#### JSON
+
+```{r}
+json.url <- "https://raw.githubusercontent.com/bsosnovski/DATA607/master/Week7Assignment/mybooks.json"
+jsonData <- getURL(json.url)
+prettify(jsonData)
+
+json_parsed <- fromJSON(jsonData)
+json_parsed
+class(json_parsed)
+
+json_df <- data.frame(json_parsed)
+colnames(json_df) <- c("ID", "Title", "Author 1", "Author 2","Publication Year", "Publisher", "Number of Pages")
+class(json_df)
+kable(json_df) %>% kable_styling(bootstrap_options = "striped")
+
+```
+
+The dataframes had different columns names and after changing the column names they look similar. However, as R objects they are not identical. 
+
+```{r}
+identical(html_df,xml_df)
+identical(html_df,json_df)
+identical(xml_df, json_df)
+```
