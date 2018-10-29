@@ -1,0 +1,199 @@
+---
+title: "Web-Scraping"
+author: "B. Sosnovski"
+date: "10/25/2018"
+output: 
+  html_document: 
+    theme: cerulean
+    toc: true
+    toc_depth: 2
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load packages 
+```{r message=FALSE}
+library(RCurl)
+library(kableExtra)# manipulate table styles
+library(stringr)
+library(httr)
+library(rvest)
+```
+
+# Extracting links from Web
+
+```{r}
+url <- "https://www.elections.ny.gov/2016ElectionResults.html"
+page <- read_html(url)
+links <- html_attr(html_nodes(page, "a"), "href")
+```
+
+## XLS Files
+
+### Extract links to and names of XLS files
+```{r}
+xls_links <- links[str_detect(links,"2016.+\\.xls")]
+
+names <- unlist(str_extract_all(xls_links, "2016.+\\.xls"))
+names
+
+# Below a fix on the regex provides a better way to extract the files names
+split_name <- str_split(names,"/")
+split_name
+fnames <- sapply(split_name, function(v) v[3])
+fnames
+
+```
+
+### Download function
+```{r}
+download_xls <- function(links,fnames,baseurl){
+        n <- length(links)
+        for (i in 1:n){
+                fileurl <- str_c(baseurl,links[i])
+                download.file(fileurl, destfile = fnames[i])
+                Sys.sleep(1)
+        }
+}
+```
+
+### Excute the download
+```{r}
+download_xls(xls_links,fnames,baseurl="https://www.elections.ny.gov") 
+```
+
+## PDF Files
+
+### Extract links to and names of PDF files
+
+Some of the links start with "/NYSBOE/elections/2016/" and others with "/NYSBOE/download/law/". We are interested in the former, and these link are divided in two categories, "General" and "Primary".
+
+```{r}
+pdf_links <- links[str_detect(links,"NYSBOE/elections/2016.+\\.pdf")]
+pdf_links
+# Notice the difference between the above regex and the one below
+pdf_names <- unlist(str_extract_all(pdf_links, "[^/]*.pdf$"))
+pdf_names
+```
+
+### Download function
+```{r}
+download_pdf <- function(fnames,baseurl1,baseurl2){
+         n <- length(fnames)
+         for (i in 1:n){
+                 fileurl <- str_c(baseurl1,fnames[i])
+                 try(content <- getBinaryURL(fileurl))
+                 if(length(content)>1){
+                         writeBin(content,fnames[i])
+                 }else {
+                         fileurl <- str_c(baseurl2,fnames[i])
+                         content <- getBinaryURL(fileurl)
+                         writeBin(content,fnames[i])
+                 }
+         }
+}
+```
+
+### Excute the download
+```{r}
+baseurl1="https://www.elections.ny.gov/NYSBOE/elections/2016/General/"
+baseurl2="https://www.elections.ny.gov/NYSBOE/elections/2016/Primary/"
+download_pdf(pdf_names,baseurl1,baseurl2) 
+```
+
+
+## API data
+
+### Without authentication
+
++ **Example 1:**
+
+The code below is a modification of the code available on https://cran.r-project.org/web/packages/httr/vignettes/api-packages.html.
+
+```{r}
+github_api <- function(path) {
+        url <- modify_url("https://api.github.com", path = path)
+        GET(url)
+}
+path = "/repos/bsosnovski/project3"
+resp <- github_api(path)
+resp
+
+```
+
+```{r}
+
+if (http_type(resp) != "application/json") {
+    stop("API did not return json", call. = FALSE)
+}
+
+http_type(resp)
+
+parsed <- jsonlite::fromJSON(content(resp, "text"), simplifyVector = FALSE)
+head(parsed)
+```
+
+The following code provides nice print methods of the response object, instead of a list.
+
+```{r}
+# structure(
+#     list(
+#       content = parsed,
+#       path = path,
+#       response = resp
+#     ),
+#     class = "github_api"
+# )
+
+print.github_api <- function(x, ...) {
+  cat("<GitHub ", x$path, ">\n", sep = "")
+  str(x$content)
+  invisible(x)
+}
+
+github_api("/users/bsosnovski")
+```
+
+Since many APIs are rate limited, we can implement a rate_limit() function that tells us how many calls against the github API are available to us.
+
+```{r}
+rate_limit <- function() {
+  github_api("/rate_limit")
+}
+rate_limit()
+
+```
+
++ **Example 2:**
+
+```{r}
+url <- "http://httpbin.org/get"
+r <- GET(url, add_headers(Name = "Sosnovski", Test = "Example 2"))
+r
+http_status(r)
+content(r, "raw") # Raw bytes
+content(r, "text") # No encoding supplied: defaulting to UTF-8
+content(r, "parse")
+```
+
+### With authentication
+
+In the link below access Yahoo Weather API, where the location is New York City.
+
+```{r}
+url <- "https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20weather.forecast%20where%20woeid%20in%20(select%20woeid%20from%20geo.places(1)%20where%20text%3D%22newyorkcity%22)&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys"
+info <- read.table("yahoo_api_key.txt", header = TRUE, stringsAsFactors = FALSE)
+names(info)
+dim(info)
+usr <- info$Consumer_Key
+psw <- info$Consumer_Secret
+resp <- GET(url, authenticate(usr, psw))
+
+http_status(resp)
+parsed <- jsonlite::fromJSON(content(resp, "text"), simplifyVector = FALSE)
+head(parsed)
+
+```
