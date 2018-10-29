@@ -1,0 +1,100 @@
+---
+title: "Week 9 Assignment - Web Scraping with APIs"
+author: "B. Sosnovski"
+date: "10/27/2018"
+output: 
+  html_document: 
+    theme: cerulean
+    toc: true
+    toc_depth: 2
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Assignment Overview
+
+In this assignment, we choose one of the New York Times APIs to construct an interface in R to read in the JSON data, and transform it to an R dataframe.
+The New York Times web site provides a set of APIs available on http://developer.nytimes.com/docs.
+
+# Load packages 
+```{r message=FALSE}
+library(kableExtra)# manipulate table styles
+library(dplyr)
+library(httr)
+library(rtimes)
+library(ggplot2)
+```
+
+
+# Using package rtimes
+
+We use the function as_search to output a series of S3 objects, one for each item found. Each element, an object of class as_search, is a summary of a list of data.
+
+## API Key
+
+The API key was put the key in your .Renviron file, which will be called on startup of R. So we don't  don't have to enter the key for each run of a function. The following function adds the key to .Renviron file.
+
+Sys.setenv(NYTIMES_AS_KEY = "YOURKEYHERE")
+
+
+In this example, the search article API is used with query = "Brazil", during Oct 10 - 26, 2018.
+
+```{r}
+resp <- as_search(q="Brazil", begin_date = "20181010", end_date = '20181026')
+resp
+class(resp$data)
+glimpse(resp$data)
+```
+
+## Visualization 
+
+We visualize the number of articles grouped by news_desk variable from the table resp$data. The code below was restrieve from http://www.storybench.org/working-with-the-new-york-times-api-in-r/.
+
+```{r}
+data <- resp$data
+data %>%
+  group_by(news_desk) %>%
+  summarize(count=n()) %>%
+  mutate(percent = (count / sum(count))*100) %>%
+  ggplot() +
+  geom_bar(aes(y=percent, x=news_desk, fill=news_desk), stat = "identity") + coord_flip()
+
+```
+
+# Using package httr
+
+In this example, we use the package httr to search  NYT best sellers book via  books_api.
+
+```{r}
+info <- read.table("NYT_API_Key.txt", header = TRUE, stringsAsFactors = FALSE)
+names(info)
+dim(info)
+key <- info$Key
+url <- "http://api.nytimes.com/svc/books/v3/lists/best-sellers/history.json"
+resp <- GET(url, query=list("api-key"=key))
+resp
+http_status(resp)
+http_type(resp)
+parsed <- jsonlite::fromJSON(content(resp, "text"), simplifyVector = FALSE)
+names(parsed)
+class(parsed)
+parsed$results[1:2]
+```
+
+The results of the query are parsed as a list that has different number of rows. To convert it to a data frame we need to make even the number of rows in the list . The following code was retrieved from https://stackoverflow.com/questions/27153979/converting-nested-list-unequal-length-to-data-frame.
+
+```{r}
+jsonData <- parsed$results
+class(jsonData)
+indx <- sapply(jsonData, length)
+res <- as.data.frame(do.call(rbind,lapply(jsonData, `length<-`,
+                          max(indx))))
+colnames(res) <- names(jsonData[[which.max(indx)]])
+class(res)
+kable(head(res))%>% kable_styling(bootstrap_options = c("striped", "condensed"))
+```
+
