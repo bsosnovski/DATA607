@@ -6,6 +6,7 @@ output:
   html_document: 
     theme: cerulean
     toc: true
+    toc_float: true
     toc_depth: 2
     number_sections: true
 ---
@@ -38,8 +39,13 @@ We use the function as_search to output a series of S3 objects, one for each ite
 
 The API key was put the key in your .Renviron file, which will be called on startup of R. So we don't  don't have to enter the key for each run of a function. The following function adds the key to .Renviron file.
 
-Sys.setenv(NYTIMES_AS_KEY = "YOURKEYHERE")
-
+```{r}
+info <- read.table("NYT_API_Key.txt", header = TRUE, stringsAsFactors = FALSE)
+names(info)
+dim(info)
+key <- info$Key
+Sys.setenv(NYTIMES_AS_KEY = key)
+```
 
 In this example, the search article API is used with query = "Brazil", during Oct 10 - 26, 2018.
 
@@ -70,19 +76,16 @@ data %>%
 In this example, we use the package httr to search  NYT best sellers book via  books_api.
 
 ```{r}
-info <- read.table("NYT_API_Key.txt", header = TRUE, stringsAsFactors = FALSE)
-names(info)
-dim(info)
-key <- info$Key
 url <- "http://api.nytimes.com/svc/books/v3/lists/best-sellers/history.json"
 resp <- GET(url, query=list("api-key"=key))
 resp
 http_status(resp)
 http_type(resp)
-parsed <- jsonlite::fromJSON(content(resp, "text"), simplifyVector = FALSE)
+parsed <- jsonlite::fromJSON(content(resp, "text",flatten = TRUE), simplifyVector = FALSE)
 names(parsed)
 class(parsed)
 parsed$results[1:2]
+
 ```
 
 The results of the query are parsed as a list that has different number of rows. To convert it to a data frame we need to make even the number of rows in the list . The following code was retrieved from https://stackoverflow.com/questions/27153979/converting-nested-list-unequal-length-to-data-frame.
@@ -95,6 +98,26 @@ res <- as.data.frame(do.call(rbind,lapply(jsonData, `length<-`,
                           max(indx))))
 colnames(res) <- names(jsonData[[which.max(indx)]])
 class(res)
+names(res)
+dim(res)
 kable(head(res))%>% kable_styling(bootstrap_options = c("striped", "condensed"))
 ```
 
+ 
+We add a column with the ranks of the NYT best-sellers books, which will be located in the table as last column then we move it to the start of the column.
+ 
+```{r}
+res <- mutate(res, row_number())
+res <- rename(res, rank ="row_number()")
+names(res)
+new_res <- res %>% select(rank, everything())
+names(new_res)
+```
+ 
+We note that the columns isbns, ranks_history and reviews contains lists and not that important for display of the data. So we remove them from display.
+
+```{r}
+new_res <- new_res %>% select(rank:publisher)
+
+kable(head(new_res))%>% kable_styling(bootstrap_options = c("striped", "condensed"))
+```
