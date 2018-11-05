@@ -1,0 +1,472 @@
+---
+title: "Project 4 - Document Classification"
+author: "B. Sosnovski"
+date: "11/1/2018"
+output: 
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+    number_sections: true
+    toc: true
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Project description
+
+It can be useful to be able to classify new "test" documents using already classified "training" documents.  A common example is using a corpus of labeled spam and ham (non-spam) e-mails to predict whether or not a new document is spam.  
+
+For this project, we start with a spam/ham dataset, then predict the class of new documents (either withheld from the training dataset or from another source such as your own spam folder). 
+
+The data used in the project was retrieved from:  https://spamassassin.apache.org/old/publiccorpus/
+
+-------------------------------------------------------
+
+# Load library
+```{r }
+library(stringr)
+suppressMessages(library(dplyr))
+library(tidytext)
+library(ggplot2)
+library(tidyr)
+suppressMessages(library(wordcloud))
+library(readr)
+library(purrr)
+library(tm)
+library(e1071)
+library(caret)
+```
+
+
+# Extracting files
+
+Before starting with the statistical processing of text, we collect some files with email text data that will serve as basis for the corpus
+
+We download and decompress the files into individual folders in the working directory.
+
+```{r}
+
+base_url <-"https://spamassassin.apache.org/old/publiccorpus/"
+spam_file <- "20030228_spam.tar.bz2"
+ham_file <- "20030228_easy_ham.tar.bz2" 
+files <- c(spam_file,ham_file)
+
+# Download function:
+#
+# download_file <- function(files,baseurl){
+#         n <- length(files)
+#         for (i in 1:n){
+#                 fileurl <- str_c(baseurl,files[i])
+#                 download.file(fileurl, destfile = files[i])
+#                 Sys.sleep(1)
+#                 untar(files[i])
+#         }
+# }
+# 
+#download_file(files,base_url)
+
+# Names sub-directories including the current working directory:
+list.dirs(path = ".", full.names = TRUE, recursive = TRUE)
+
+# Number of files in spam folder:
+length(list.files("./spam"))
+
+# Number of files in ham folder:
+length(list.files("./easy_ham"))
+
+# file names:
+spam_fnames <- list.files("./spam")
+spam_fnames[1:5]
+ham_fnames <- list.files("./easy_ham")
+ham_fnames[1:5]
+```
+
+Checking if there is any file in the directory that doesn't match the standard name of a file, that is, name starting with 0.
+
+```{r}
+# spam folder:
+not_stand_spam_name <- str_detect(spam_fnames,"^\\d+\\.[:alnum:]")
+not_spam <- spam_fnames[not_stand_spam_name == FALSE]
+not_spam
+
+# ham folder:
+not_stand_ham_name <- str_detect(ham_fnames,"^\\d+\\.[:alnum:]")
+not_ham <- ham_fnames[not_stand_ham_name == FALSE]
+not_ham 
+```
+
+The existing cmds files don't correspond to either spam or ham files so we remove them from their directories.
+
+```{r}
+
+if (file.exists("spam/cmds")) file.remove("./spam/cmds")
+if (file.exists("easy_ham/cmds")) file.remove("./easy_ham/cmds")
+
+```
+
+If we run again the code lines to dectect non-standard file names, it turns out to be empty.
+
+```{r}
+not_stand_spam_name <- str_detect(spam_fnames,"^\\d+\\.[:alnum:]")
+not_spam <- spam_fnames[not_stand_spam_name == FALSE]
+not_spam
+```
+
+
+# Pre-processing
+
+We define a function to read all files from the folders into a data frame.
+
+```{r}
+folders <- c("./spam", "./easy_ham")
+categories <-c("spam", "ham")
+symbs <- c("s", "h")
+vec_fnames <- c(spam_fnames, ham_fnames)
+
+
+# Function
+#
+read_folder_to_df <- function(folders, categories, symbs, vec_fnames){
+        df <- data_frame()
+        n <- length(folders)
+        for (i in 1:n){
+                folder <- folders[i]
+                category <- categories[i]
+                symb <- symbs[i]
+                fnames <- vec_fnames[i]
+                 
+                temp <- data_frame(file = dir(folder,  full.names = TRUE)) %>%
+                        mutate(text = map(file, read_lines)) %>%
+                        transmute(category = category, id = basename(file), text) %>%
+                        unnest(text)
+                        df <- bind_rows(df, temp)
+         }
+         return(df)
+}
+
+# Creating a corpus
+# 
+corpus_df <- read_folder_to_df(folders, categories, symbs, vec_fnames)
+corpus_df
+
+
+corpus_df <- tibble::rowid_to_column(corpus_df, "linenumber")
+corpus_df
+
+# Extract rows for the first occurrence of a category in the data frame
+corpus_df %>%
+        group_by(category) %>% 
+        filter(linenumber == min(linenumber)) %>% 
+        slice(1) %>% # takes the first occurrence if there is a tie
+        ungroup()
+```
+
+The column category describes from which type of emails each message comes from, and the id column identifies a unique message within each category. Next we check how many messages are included in each category.
+
+The results corresponds to the number of files shown above minus the cmds files.
+
+```{r}
+corpus_df %>% group_by(category) %>% 
+        summarize(messages = n_distinct(id)) %>%
+        ungroup()
+new_df <- corpus_df
+```
+
+
+# Create corpus
+
+```{r}
+
+# Remove all non graphical characters 
+# (must be done before using tm_map, otherwise certain characters cause error)
+usableText=str_replace_all(corpus_df$text,"[^[:graph:]]", " ") 
+
+email_corpus <- Corpus(VectorSource(usableText))
+print(email_corpus)
+
+inspect(email_corpus[1:25])
+
+```
+
+# Data cleansing
+
+Often colons and hyphens are used in email texts without spaces between the words separated by them. Using the removePunctuation transform  without fixing this will cause the two words on either side of the symbols  to be combined. We need to fix this prior to using the transformations.
+
+The code below was retrieved from https://eight2late.wordpress.com/2015/05/27/a-gentle-introduction-to-text-mining-using-r/, and shows that tm package provides the ability to create a custom transformation.
+
+
+```{r}
+
+length(corpus_df$text)
+
+#create the toSpace content transformer
+toSpace <- content_transformer(function(x, pattern) {return (gsub(pattern, " ", x))})
+
+# remove "-", ":", ".", and "'" and replace them with space
+email_corpus <- tm_map(email_corpus, toSpace, "-")
+email_corpus <- tm_map(email_corpus, toSpace, ":")
+email_corpus <- tm_map(email_corpus, toSpace, "\\.")
+email_corpus <- tm_map(email_corpus, toSpace, "'")
+```
+
+The next steps in data cleansing are to:
+
+* Remove punctuation
+* Convert the corpus to lower case
+* Remove all numbers
+* Remove white spaces
+* Remove stop words
+
+```{r}
+# remove punctuation
+email_corpus <- tm_map(email_corpus, removePunctuation)
+
+# remove numbers
+email_corpus <- tm_map(email_corpus, removeNumbers)
+
+#translate all letters to lower case
+email_corpus <- tm_map(email_corpus, tolower)
+
+# remove white spaces
+email_corpus <- tm_map(email_corpus, stripWhitespace)
+
+# Remove stop-words
+email_corpus <- tm_map(email_corpus, removeWords, stopwords("English"))
+
+
+length(email_corpus)
+inspect(email_corpus[1:25])
+```
+
+# Document term matrix
+
+```{r}
+email_dtm <- DocumentTermMatrix(email_corpus)
+inspect(email_dtm[1:4, 1:30])
+```
+
+
+# Mining the corpus
+
+In constructing the TDM, we have converted a corpus of text into a mathematical object that can be analysed using quantitative techniques of matrix algebra.  
+
+To get the frequency of occurrence of each word in the corpus, one can use the dtm. Unfortunately, the process exhausted computational resources. To avoid this issue we turn back to the data frame 
+
+## Replace text in data frame with the clean data
+
+```{r}
+
+head(corpus_df, n=5)
+
+df <- data.frame(text = get("content", email_corpus))
+
+head(df, n=5)
+
+corpus_df$text <- as.character(df$text)
+
+head(corpus_df, n=5)
+
+
+```
+
+## Tidying data
+
+```{r}
+tidy_corpus <-corpus_df %>% unnest_tokens(word, text)
+
+tidy_corpus
+
+spam_words <- tidy_corpus %>%
+        group_by(category) %>% 
+        filter(category == "spam") %>% 
+        count(word, sort = TRUE) %>%
+        ungroup()
+head(spam_words, n=15)
+tail(spam_words)
+
+ham_words <- tidy_corpus %>%
+        group_by(category) %>% 
+        filter(category == "ham") %>% 
+        count(word, sort = TRUE) %>%
+        ungroup()
+head(ham_words, n=15)
+tail(ham_words)
+```
+
+Interesting enough, the clean data shows some Chinese characters, which have low frequency. Some argue that the least frequent terms can be more interesting than one might think. This is  because terms that occur rarely are likely to be more descriptive of specific documents.
+
+Not being sure on how to deal with this, we leave the foreigner characters in the data set.
+
+# Frequency visualization
+
+## Bar graph
+
+```{r}
+spam_words %>% 
+        top_n(15) %>% 
+        mutate(word = reorder(word, n)) %>%
+        ggplot(aes(word, n))+
+        geom_col(color='darkblue', fill="darkblue")+
+        geom_col(show.legend = FALSE) +
+        labs(y= "Spam Word Count", x=NULL)+
+        coord_flip()
+
+ham_words %>% 
+        top_n(15) %>% 
+        mutate(word = reorder(word, n)) %>%
+        ggplot(aes(word, n))+
+        geom_col(color="darkred", fill="darkred")+
+        geom_col(show.legend = FALSE) +
+        labs(y= "Ham Word Count", x=NULL)+
+        coord_flip()
+
+
+```
+
+## Word clouds
+
+
+```{r}
+spam_indices <- which(corpus_df$category == "spam")
+spam_indices[1:3]
+
+ham_indices <- which(corpus_df$category == "ham")
+ham_indices[1:3]
+
+```
+
+### Word cloud for spam
+
+```{r}
+
+#setting the same seed each time ensures consistent look across clouds
+set.seed(7)
+suppressMessages(wordcloud(email_corpus[spam_indices], min.freq=500, colors=brewer.pal(6,"Dark2")))
+```
+
+### Word cloud for ham
+
+```{r}
+#setting the same seed each time ensures consistent look across clouds
+set.seed(7)
+suppressMessages(wordcloud(email_corpus[ham_indices], min.freq=1000, colors=brewer.pal(6,"Dark2")))
+```
+
+# Training and test data
+
+We divide corpus into training and test data
+by using 75% (or 3 qarters) of random text as training data and 25% (or 1 quarter) as test data.
+
+The following code are based on a tutorial available on https://towardsdatascience.com/sms-text-classification-a51defc2361c.
+
+
+```{r}
+# Randomize emails order and quantify each subset
+set.seed(12)
+(random_df <- corpus_df[sample(nrow(corpus_df)),]) #used
+random_corpus <- Corpus(VectorSource(random_df$text))#used
+
+print(random_corpus)
+random_dtm <- DocumentTermMatrix(random_corpus) #used
+inspect(random_dtm[1:4, 1:8])
+
+(n_train <- dim(random_df)[1]%/%4*3)
+(n_text <- dim(random_df)[1])
+
+# Training and test data frames
+(train_df <- random_df[1:n_train,]) # used
+(test_df <- random_df[(n_train+1):n_text,])
+
+
+# Training and test DTMs
+train_dtm <- random_dtm[1:n_train,]
+test_dtm <- random_dtm[(n_train+1):n_text,]
+
+```
+
+```{r}
+#Training & Test Label
+train_labels <- train_df$category
+test_labels <- test_df$category
+
+#Proportion for training & test labels
+prop.table(table(train_labels))
+prop.table(table(test_labels))
+```
+
+We see that the data in the training and test datasets are both split into 73% ham and 27% spam messages.
+
+We are going to transform the DTM matrix into something the Naive Bayes model can train. We use the function findFreqTerms() to extract the most frequent words in the texts. It takes in a DTM and returns a character vector with the most frequent words.
+
+```{r}
+threshold <- 0.1
+
+min_freq = round(random_dtm$nrow*(threshold/100),0)
+
+min_freq
+
+# Create vector of most frequent words
+freq_words <- findFreqTerms(x = random_dtm, lowfreq = min_freq)
+
+str(freq_words)
+
+#Filter the DTM
+train_dtm_freq <- train_dtm[ , freq_words]
+test_dtm_freq <- test_dtm[ , freq_words]
+
+dim(train_dtm_freq)
+
+dim(test_dtm_freq)
+
+```
+
+
+Since Naive Bayes trains on categorical data, the numerical data is converted to categorical data. The numeric features are converted by a function that converts any non-zero positive value to "Yes" and all zero values to "No" to state whether a specific term is present in the document.
+
+```{r}
+convert_values <- function(x) {
+  x <- ifelse(x > 0, "Yes", "No")
+}
+text_train <- apply(train_dtm_freq,  MARGIN =  2, convert_values)
+text_test <- apply(test_dtm_freq, MARGIN = 2, convert_values)
+```
+
+
+# Naive Bayes
+
+Naive Bayes is a simple technique for constructing classifiers and performs extremely well. Naive Bayes is recommended when all input features are categorical. Thus we will use the Naive Bayes technique to classify such test data and check how well it performs.
+
+The Naive Bayes model works on the assumption that the features of the dataset are independent of each other.
+
+This works well for text documents since:
+
++ words in a text document are independent of each other.
++ the location of one word doesn’t depend on another word.
+
+Thus satisfying the independence assumption of the Naive Bayes model. Hence, it is most commonly used for text classification, sentiment analysis, spam filtering & recommendation systems.
+
+
+```{r}
+#Create model from the training dataset
+text_classifier <- naiveBayes(text_train, train_labels)
+
+#Make predictions on test set
+text_test_pred <- predict(text_classifier, text_test)
+
+#Create confusion matrix
+confusionMatrix(data = text_test_pred, reference = test_labels,
+                positive = "spam", dnn = c("Prediction", "Actual"))
+
+```
+
+The results above show that the model has a high accuracy.
+
+# References
+
+- Dsilva, Deepal. "Ham or Spam? SMS Text Classification with Machine Learning. A Naive Bayes Implementation in R". Towards Data Science, Medium, Aug 14,https://towardsdatascience.com/sms-text-classification-a51defc2361c.
+
+- Index of /old/publiccorpus, https://spamassassin.apache.org/old/publiccorpus/
+
+- Awati, Kailash. "A gentle introduction to text mining using R". Eight to Late, May 27, 2015, https://eight2late.wordpress.com/2015/05/27/a-gentle-introduction-to-text-mining-using-r/.
