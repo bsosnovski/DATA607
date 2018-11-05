@@ -54,18 +54,17 @@ ham_file <- "20030228_easy_ham.tar.bz2"
 files <- c(spam_file,ham_file)
 
 # Download function:
-#
-# download_file <- function(files,baseurl){
-#         n <- length(files)
-#         for (i in 1:n){
-#                 fileurl <- str_c(baseurl,files[i])
-#                 download.file(fileurl, destfile = files[i])
-#                 Sys.sleep(1)
-#                 untar(files[i])
-#         }
-# }
-# 
-#download_file(files,base_url)
+download_file <- function(files,baseurl){
+        n <- length(files)
+        for (i in 1:n){
+                fileurl <- str_c(baseurl,files[i])
+                download.file(fileurl, destfile = files[i])
+                Sys.sleep(1)
+                untar(files[i])
+        }
+}
+
+download_file(files,base_url)
 
 # Names sub-directories including the current working directory:
 list.dirs(path = ".", full.names = TRUE, recursive = TRUE)
@@ -450,23 +449,16 @@ Thus satisfying the independence assumption of the Naive Bayes model. Hence, it 
 
 ```{r}
 #Create model from the training dataset
-text_classifier <- naiveBayes(text_train, train_labels)
+text_classifier <- naiveBayes(text_train, factor(train_labels))
 
 #Make predictions on test set
 text_test_pred <- predict(text_classifier, text_test)
 
+
 #Create confusion matrix
-confusionMatrix(data = text_test_pred, reference = test_labels,
+confusionMatrix(data = text_test_pred, reference = factor(test_labels),
                 positive = "spam", dnn = c("Prediction", "Actual"))
 
 ```
 
-The results above show that the model has a high accuracy.
 
-# References
-
-- Dsilva, Deepal. "Ham or Spam? SMS Text Classification with Machine Learning. A Naive Bayes Implementation in R". Towards Data Science, Medium, Aug 14,https://towardsdatascience.com/sms-text-classification-a51defc2361c.
-
-- Index of /old/publiccorpus, https://spamassassin.apache.org/old/publiccorpus/
-
-- Awati, Kailash. "A gentle introduction to text mining using R". Eight to Late, May 27, 2015, https://eight2late.wordpress.com/2015/05/27/a-gentle-introduction-to-text-mining-using-r/.
