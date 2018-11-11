@@ -1,0 +1,90 @@
+---
+title: "Recommender Systems" 
+subtitle: "**Facebook's recommendation system for business' pages**"
+author: "B. Sosnovski"
+date: "11/08/2018"
+output: 
+  prettydoc::html_pretty:
+    theme: tactile
+    highlight: github
+    number_sections: true
+    
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Assignment overview
+ 
+1. Identify a recommender system website. 
+2. Perform a Scenario Design analysis.  Consider whether it makes sense for the selected recommender system to perform scenario design twice, once for the organization and once for the organization's customers.
+3. Attempt to reverse engineer what it is possible about the site, from the site interface and any available information that can be found on the Internet or elsewhere.
+4. Include specific recommendations about how to improve the site's recommendation capabilities going forward. 
+
+# Recommender System
+
+For this discussion, I chose the new business pages' recommendation system on Facebook.
+
+Facebook uses different recomendations systems for different parts of its platform. In combination with other techniques, collaborative filtering is applied at Facebook to help people discover items that are most relevant to them. 
+
+Facebook is rolling out new features of providing users with business' recomendations. It is changing the rating scale from 1-5 to 1-10 for business' pages, it is using the sentiments within reviews on a business’s page, and is also incorporating aspects such as "recommendations" instead of "reviews".
+
+Rather than selecting a number and giving the minimum feedback required; customers are asked “Do you recommend ...?”, which they can answer with a simple "yes" or, "no". If "yes", they can to add tags, share photos and provide additional feedback for their recommendation. If "no" is selected; customers have an equal opportunity to share their feedback regarding they are dissatisfied with the business.
+
+Regardless of whether you’re searching for a particular business, recommendations from your friends are liable to carry weight.
+
+I think that it makes sense for the Facebook's recommender system to perform scenario design twice, from the company's and from user's perspectives.
+
+
+# Target users
+
+The target users are :
+
+- Businesses with Facebook pages
+- Customers of businnes with Facebook pages
+- Potential new customers to discover new businesses
+
+# Facebook's perspective:
+## What are their key goals
+
+- Promote authenticity and reduce the likelihood of fraudulent and spam reviews.
+- Provide a more meandinful way of recommendign a business not based on a number that took 5 seconds to click and right away use it to either help or hurt a business.
+
+# Users' perspective:
+## What are their key goals
+
+- Business to connect with customers and vice-versa.
+- Help businesses to identify positive trends and selling points of their business.
+- Upon feedback, businesses can attempt to enhance their customer’s online recommendations to retain customers and/or gain new ones.
+- The new recommendations system allows customers to say whether they’d tell a friend to go to this place or not and why.
+- The system also allows customers to say whether they're satisfied or not to the business and why.
+- The system helps users discover new places around them recommended by their friends.
+
+# How can the application help them accomplish their goals?
+
+Many users already use the rating, review and feedback system on Facebook. Having a recommendation of a FB friend may be more meaninful to users who are seeking for a new place to take their businesses.
+
+When visiting a business' page on FB, users will be asked if they would recommend the business and based on the responses give an appropriate feedback.
+
+If users want to recommend a business, they have the choice who can see the recommendation.
+
+If users don't want to recommend a business, they have the choice to give the business a reason why. But not sure if that is done publicly or privately. In any case, it seems to affect ratings.
+
+Users can also directly send an invitation to other users to like or take a look at business page.
+
+
+# Specific recommendations to Iimprove site's recommendation capabilities moving forward
+
+One thing that is not clear to me if there is a way of making recommendation of businesses without a Facebook page?
+
+When I write and post a "recommendation" (review) on a business page, it seems to not show in my news feed but is there an option to show it in my news feed?
+
+How to ensure that the person that is leaving a recommendation have indeed used the business? It seems that someone can leave a negative review or not recommend a place based on reasons other than patronage. 
+
+
+# Reference
+
+* Taylor K. "How to Handle Facebook Recommendations, Business Page Updates." Review Push, Aug 20, 2018. https://www.reviewpush.com/blog/facebook-recommendations-pages-august-2018
+
+* Maja Kabiljo. "Recommending items to more than a billion people." Facebook Code, Jun 2, 2015. https://code.fb.com/core-data/recommending-items-to-more-than-a-billion-people/
