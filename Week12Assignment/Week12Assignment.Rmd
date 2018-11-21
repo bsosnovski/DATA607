@@ -1,0 +1,128 @@
+---
+title: "NoSQL Migration"
+author: "B. Sosnovski"
+date: "11/17/2018"
+output: 
+    prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Assignment overview
+
+For this assignment, we should take information from a relational database and migrate it to a NoSQL database of our own choosing, preferably in R . 
+
+## SQL Database
+
+For the relational database, I chose the Employees sample database was developed by Patrick Crews and Giuseppe Maxia and provides a combination of a large base of data spread over six separate tables and consisting of 4 million records in total. The structure is compatible with a wide range of storage engine types. Infomation about the Employees sample database is available on <https://dev.mysql.com/doc/employee/en/employees-introduction.html>
+
+The following diagram provides an overview of the structure of the Employees sample database.
+
+![ ](https://i.imgur.com/pMiQtTu.png){ width=75% }
+
+## NoSQL database
+
+Though I planned using Neo4j in this assignment, I ended up using MongoDB because of technical issues in running Neo4j with R in my laptop.
+
+# Load packages
+```{r}
+library(RMySQL)
+library(dplyr)
+library(mongolite)
+library(rjson)
+```
+
+# Establish SQL Connection
+
+```{r}
+con <- dbConnect(MySQL(), user='test_user', password='data607', dbname='employees', host='localhost')
+```
+
+# Basic use of SQL
+
+```{r}
+dbListTables(con)
+dbListFields(con, "titles")
+
+sql <- "SELECT * FROM titles LIMIT 5;"
+dbGetQuery(con, sql)
+
+```
+
+# SQL Queries
+
+Read some of the information from all tables in the database into a data frame in R. I combined different tables into a single data frame.
+
+```{r}
+employee_list <- dbReadTable(con, 'employees')
+str(employee_list)
+```
+
+```{r}
+sql <- "SELECT   e.emp_no AS empID, concat(e.first_name,' ', e.last_name) AS employee, e.gender, t.title, d.dept_name
+        FROM employees e JOIN titles t ON e.emp_no = t.emp_no
+        JOIN dept_emp de ON de.emp_no = e.emp_no
+        JOIN departments d ON d.dept_no = de.dept_no
+        ORDER BY e.last_name, e.first_name;"
+df1 <- dbGetQuery(con, sql)
+str(df1)
+head(df1)
+
+sql <- "SELECT   d.dept_name, concat(e.first_name,' ', e.last_name) AS manager 
+        FROM employees e JOIN dept_manager dm ON dm.emp_no = e.emp_no
+        JOIN departments d ON d.dept_no = dm.dept_no
+        ORDER BY e.last_name, e.first_name;"
+df2 <- dbGetQuery(con, sql)
+str(df2)
+head(df2)
+dbDisconnect(con)
+```
+
+The following code adds the managers' names from df2 to df1.
+
+```{r}
+ df <- df1 %>% inner_join(df2, by = c("dept_name" = "dept_name"))
+head(df)
+dim(df)
+```
+
+
+# Import data into MongoDB
+
+This part of the work follows the instructions posted on  <https://www.r-bloggers.com/using-mongodb-with-r/>
+
+```{r}
+# create connection, database and collection
+mongo_db = mongo(collection = "df", db = "employees")
+str(mongo_db)
+
+# Insert the data
+mongo_db$insert(df)
+
+# check if we have inserted df
+mongo_db$iterate()$one()
+
+# check the number of employees inserted
+length(mongo_db$distinct("empID"))
+length(employee_list$emp_no)
+
+
+```
+
+
+# Advantages and disadvantages
+
+* NoSQL is capable of storing, processing, and managing huge amounts of data.
+* NoSQL focus on better response time, scale while maintaining availability and performance.
+* SQL can be an easier syntax to work with rather than JSON for NoSQL
+* The NoSQL database demanded a lot more technical skills from me  with the installation and use than SQL did when I first used in the beginner of the course.
+
+
+# Reference
+
+* Fisseha Berhane. "Using MongoDB with R". R-bloggers. March 2, 2017. <https://www.r-bloggers.com/using-mongodb-with-r/>
